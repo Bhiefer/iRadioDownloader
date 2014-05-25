@@ -16,6 +16,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -271,6 +272,250 @@ public class Downloader
 		} while (!empty);
 
 		return items;
+	}
+
+	public URL getItemUrl(Item item)
+	{
+		try
+		{
+			String station;
+
+			if (item.getStation().toLowerCase(Locale.getDefault()).contains("vltava"))
+			{
+				station = "vltava";
+			}
+			else if (item.getStation().toLowerCase(Locale.getDefault()).contains("dvojka"))
+			{
+				station = "dvojka";
+			}
+			else
+			{
+				return null;
+			}
+
+			File listFile = File.createTempFile(station, item.getId() + "");
+			URL url = new URL("http://www.rozhlas.cz/" + station + "/stream");
+
+			get(listFile, url);
+
+			XmlPullParser parser = Xml.newPullParser();
+
+			String name = null;
+			InputStream is = null;
+			try
+			{
+				is = new FileInputStream(listFile);
+
+				byte[] matchUrl = item.getPlayerUrlString().getBytes(Charset.forName("US-ASCII"));
+
+				do
+				{
+					boolean match = true;
+					for (int i = 0; i < matchUrl.length; i++)
+					{
+						if (matchUrl[i] == is.read())
+						{
+							Log.d(TAG, "Match: " + (char) matchUrl[i]);
+						}
+						else
+						{
+							match = false;
+							break;
+						}
+					}
+
+					if (match)
+					{
+						byte[] matchHref = "<a href=\"".getBytes(Charset.forName("US-ASCII"));
+						while (true)
+						{
+							match = true;
+							for (int i = 0; i < matchHref.length; i++)
+							{
+								if (matchHref[i] == is.read())
+								{
+									Log.d(TAG, "Match: " + (char) matchHref[i]);
+								}
+								else
+								{
+									match = false;
+									break;
+								}
+							}
+
+							if (match)
+							{
+								StringBuilder sb = new StringBuilder();
+
+								char ch = (char) is.read();
+
+								while (ch != '"')
+								{
+									sb.append(ch);
+
+									ch = (char) is.read();
+								}
+
+								String urlString = "http://www.rozhlas.cz" + sb.toString();
+								Log.d(TAG, urlString);
+								return new URL(urlString);
+							}
+						}
+					}
+
+				} while (true);
+			}
+
+			catch (
+					Exception ex
+					)
+
+			{
+				Log.e(TAG, "Error during parsing: " + name + ": " + ex.toString());
+			}
+
+			finally
+
+			{
+				try
+				{
+					is.close();
+				}
+				catch (IOException e1)
+				{
+					Log.e(TAG, Log.getStackTraceString(e1));
+				}
+			}
+		}
+
+		catch (
+				Exception e
+				)
+
+		{
+			e.printStackTrace();
+		}
+
+		return null;
+	}
+
+	public URL getItemDetails(URL url, Item item)
+	{
+		try
+		{
+
+			File listFile = File.createTempFile("details", item.getId() + "");
+
+			get(listFile, url);
+
+			XmlPullParser parser = Xml.newPullParser();
+
+			String name = null;
+			InputStream is = null;
+			try
+			{
+				is = new FileInputStream(listFile);
+
+				// auto-detect the encoding from the stream
+				parser.setInput(is, null);
+				int eventType = parser.getEventType();
+
+				while (eventType != XmlPullParser.END_DOCUMENT)
+				{
+					switch (eventType)
+					{
+						case XmlPullParser.START_TAG:
+							name = parser.getName();
+
+							try
+							{
+								if ("a".equals(name))
+								{
+									for (int i = 0; i < parser.getAttributeCount(); i++)
+									{
+										if ("class".equals(parser.getAttributeName(i)) && "icon player-archive".equals(parser.getAttributeValue(i)))
+										{
+											for (int j = 0; j < parser.getAttributeCount(); j++)
+											{
+												if ("href".equals(parser.getAttributeName(j)) && item.getPlayerUrlString().equals(parser.getAttributeValue(j)))
+												{
+													while (parser.next() != XmlPullParser.START_TAG && parser.getName() != "a")
+													{
+													}
+
+													for (int k = 0; k < parser.getAttributeCount(); k++)
+													{
+														if ("href".equals(parser.getAttributeName(k)))
+														{
+															String urlString = "http://www.rozhlas.cz" + parser.getAttributeValue(k);
+															Log.d(TAG, urlString);
+															return new URL(urlString);
+														}
+													}
+												}
+											}
+										}
+										else if ("class".equals(parser.getAttributeName(i)))
+										{
+											Log.d(TAG, "Class:" + parser.getAttributeValue(i));
+										}
+									}
+								}
+							}
+							catch (Exception ex)
+							{
+								Log.e(TAG, Log.getStackTraceString(ex));
+							}
+							break;
+						case XmlPullParser.END_TAG:
+							name = parser.getName();
+							break;
+						default:
+							break;
+					}
+
+					try
+					{
+						eventType = parser.next();
+					}
+					catch (Exception ex)
+					{
+						Log.e(TAG, "Error during parsing: " + name + ": " + ex.toString());
+					}
+				}
+			}
+
+			catch (
+					Exception ex
+					)
+
+			{
+				Log.e(TAG, "Error during parsing: " + name + ": " + ex.toString());
+			}
+
+			finally
+
+			{
+				try
+				{
+					is.close();
+				}
+				catch (IOException e1)
+				{
+					Log.e(TAG, Log.getStackTraceString(e1));
+				}
+			}
+		}
+
+		catch (
+				Exception e
+				)
+
+		{
+			e.printStackTrace();
+		}
+
+		return null;
 	}
 
 	private void setTitleAndArtist(Item item, String longTitle)

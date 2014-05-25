@@ -9,6 +9,7 @@ import android.os.IBinder;
 import android.util.Log;
 
 import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
@@ -90,7 +91,17 @@ public class DownloadService extends Service
 					else
 					{
 						filtered.add(i);
-						break;
+//						break;
+					}
+				}
+
+				for (Item i : filtered)
+				{
+					URL url = mDownloader.getItemUrl(i);
+
+					if (url != null)
+					{
+						mDownloader.getItemDetails(url, i);
 					}
 				}
 
