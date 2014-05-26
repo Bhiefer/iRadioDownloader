@@ -313,9 +313,16 @@ public class Downloader
 					boolean match = true;
 					for (int i = 0; i < matchUrl.length; i++)
 					{
-						if (matchUrl[i] == is.read())
+						int ch = is.read();
+
+						if (ch == -1)
 						{
-							Log.d(TAG, "Match: " + (char) matchUrl[i]);
+							return null;
+						}
+
+						if (matchUrl[i] == ch)
+						{
+//							Log.d(TAG, "Match: " + (char) matchUrl[i]);
 						}
 						else
 						{
@@ -332,9 +339,16 @@ public class Downloader
 							match = true;
 							for (int i = 0; i < matchHref.length; i++)
 							{
-								if (matchHref[i] == is.read())
+								int ch = is.read();
+
+								if (ch == -1)
 								{
-									Log.d(TAG, "Match: " + (char) matchHref[i]);
+									return null;
+								}
+
+								if (matchHref[i] == ch)
+								{
+//									Log.d(TAG, "Match: " + (char) matchHref[i]);
 								}
 								else
 								{
@@ -399,7 +413,7 @@ public class Downloader
 		return null;
 	}
 
-	public URL getItemDetails(URL url, Item item)
+	public void getItemDetails(URL url, Item item)
 	{
 		try
 		{
@@ -410,8 +424,11 @@ public class Downloader
 
 			XmlPullParser parser = Xml.newPullParser();
 
+			StringBuilder comment = new StringBuilder();
+
 			String name = null;
 			InputStream is = null;
+			boolean inPosition = false;
 			try
 			{
 				is = new FileInputStream(listFile);
@@ -429,36 +446,56 @@ public class Downloader
 
 							try
 							{
-								if ("a".equals(name))
+								if ("meta".equals(name) && "image".equals(Utils.getAttribute(parser, "itemprop")))
 								{
-									for (int i = 0; i < parser.getAttributeCount(); i++)
+									item.setArtwork(new URL(Utils.getAttribute(parser, "content")));
+								}
+								else if ("div".equals(name) && "audio".equals(Utils.getAttribute(parser, "class")))
+								{
+									int div = 1;
+									while ((eventType = parser.next()) != XmlPullParser.END_TAG || !"div".equals(name = parser.getName()) || div > 0)
 									{
-										if ("class".equals(parser.getAttributeName(i)) && "icon player-archive".equals(parser.getAttributeValue(i)))
-										{
-											for (int j = 0; j < parser.getAttributeCount(); j++)
-											{
-												if ("href".equals(parser.getAttributeName(j)) && item.getPlayerUrlString().equals(parser.getAttributeValue(j)))
-												{
-													while (parser.next() != XmlPullParser.START_TAG && parser.getName() != "a")
-													{
-													}
 
-													for (int k = 0; k < parser.getAttributeCount(); k++)
-													{
-														if ("href".equals(parser.getAttributeName(k)))
-														{
-															String urlString = "http://www.rozhlas.cz" + parser.getAttributeValue(k);
-															Log.d(TAG, urlString);
-															return new URL(urlString);
-														}
-													}
-												}
+										if (eventType == XmlPullParser.END_TAG && "div".equals(name))
+										{
+											div--;
+										}
+									}
+
+									inPosition = true;
+								}
+								else if ("div".equals(name) && "image".equals(Utils.getAttribute(parser, "class")))
+								{
+									while (true)
+									{
+										try
+										{
+											if ((eventType = parser.nextTag()) == XmlPullParser.END_TAG && "div".equals(name = parser.getName()))
+											{
+												break;
 											}
 										}
-										else if ("class".equals(parser.getAttributeName(i)))
+										catch (Exception e)
 										{
-											Log.d(TAG, "Class:" + parser.getAttributeValue(i));
+											Log.e(TAG, "Error during parsing: " + name + ": " + e.toString());
 										}
+									}
+
+									inPosition = true;
+								}
+								else if ("div".equals(name) && "author".equals(Utils.getAttribute(parser, "class")))
+								{
+									inPosition = false;
+
+									item.setComment(comment.toString());
+
+									return;
+								}
+								if ("p".equals(name) && inPosition)
+								{
+									if (!"perex".equals(Utils.getAttribute(parser, "class")))
+									{
+										comment.append(parser.nextText()).append('\n');
 									}
 								}
 							}
@@ -485,10 +522,7 @@ public class Downloader
 				}
 			}
 
-			catch (
-					Exception ex
-					)
-
+			catch (Exception ex)
 			{
 				Log.e(TAG, "Error during parsing: " + name + ": " + ex.toString());
 			}
@@ -507,15 +541,11 @@ public class Downloader
 			}
 		}
 
-		catch (
-				Exception e
-				)
-
+		catch (Exception e)
 		{
 			e.printStackTrace();
 		}
 
-		return null;
 	}
 
 	private void setTitleAndArtist(Item item, String longTitle)

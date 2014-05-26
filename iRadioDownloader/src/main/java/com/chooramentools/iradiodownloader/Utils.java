@@ -2,6 +2,8 @@ package com.chooramentools.iradiodownloader;
 
 import android.os.Build;
 
+import org.xmlpull.v1.XmlPullParser;
+
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
@@ -123,5 +125,18 @@ public class Utils
 		filename = filename.replaceAll("\\r|\\n", "");
 
 		return filename;
+	}
+
+	public static String getAttribute(XmlPullParser parser, String name)
+	{
+		for (int i = 0; i < parser.getAttributeCount(); i++)
+		{
+			if (name.equals(parser.getAttributeName(i)))
+			{
+				return parser.getAttributeValue(i);
+			}
+		}
+
+		return null;
 	}
 }

@@ -17,8 +17,10 @@ import org.jaudiotagger.tag.id3.framebody.FrameBodyCOMM;
 import org.jaudiotagger.tag.id3.framebody.FrameBodyTCOM;
 import org.jaudiotagger.tag.id3.framebody.FrameBodyTPE3;
 import org.jaudiotagger.tag.id3.framebody.FrameBodyTRCK;
+import org.jaudiotagger.tag.images.ArtworkFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Date;
@@ -37,6 +39,7 @@ public class Item
 
 	private String mComposer;
 	private String mConductor;
+
 	private String mComment;
 	private URL mArtwork;
 	private long mId;
@@ -127,6 +130,18 @@ public class Item
 			if (mArtist != null)
 			{
 				tag.addField(tag.createField(ID3v24FieldKey.ARTIST, mArtist));
+			}
+
+			if (getArtworkFile().exists())
+			{
+				try
+				{
+					tag.addField(tag.createField(ArtworkFactory.createArtworkFromFile(getArtworkFile())));
+				}
+				catch (IOException e)
+				{
+					e.printStackTrace();
+				}
 			}
 
 			AbstractID3v2Frame frame = getTrackFrame();
@@ -314,7 +329,7 @@ public class Item
 	@Override
 	public String toString()
 	{
-		return getFile().getAbsolutePath() + " " + mId;
+		return getFile().getAbsolutePath() + " " + mId + ", artwork:" + (mArtwork == null ? "null" : mArtwork.toString()) + "\nComment:\n" + mComment;
 	}
 
 	public void setTotal(int total)
@@ -340,6 +355,16 @@ public class Item
 	public void setArtwork(URL artwork)
 	{
 		mArtwork = artwork;
+	}
+
+	public String getComment()
+	{
+		return mComment;
+	}
+
+	public void setComment(String comment)
+	{
+		mComment = comment.trim();
 	}
 
 }

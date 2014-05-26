@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.os.IBinder;
 import android.util.Log;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -80,7 +81,7 @@ public class DownloadService extends Service
 			{
 				List<Item> items = mDownloader.getItems();
 
-				Log.d(TAG, items.toString());
+//				Log.d(TAG, items.toString());
 
 				for (Item i : items)
 				{
@@ -103,6 +104,8 @@ public class DownloadService extends Service
 					{
 						mDownloader.getItemDetails(url, i);
 					}
+
+					Log.d(TAG, "Parsed:" + i);
 				}
 
 				Log.d(TAG, "Total: " + items.size() + ", download:" + filtered.size());
@@ -137,6 +140,13 @@ public class DownloadService extends Service
 							if (i.getFile().exists())
 							{
 								downloaded.add(i);
+							}
+
+							File artwork = i.getArtworkFile();
+
+							if (!artwork.exists() && i.getArtwork() != null)
+							{
+								mDownloader.get(artwork, i.getArtwork());
 							}
 						}
 						catch (IOException e)
