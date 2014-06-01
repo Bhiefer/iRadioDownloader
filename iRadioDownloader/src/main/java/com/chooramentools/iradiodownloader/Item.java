@@ -28,7 +28,7 @@ import java.util.Date;
 /**
  * Created by Bhiefer on 4.5.2014.
  */
-public class Item
+public class Item implements Comparable
 {
 
 	private String mTitle;
@@ -372,4 +372,16 @@ public class Item
 		mComment = comment.trim();
 	}
 
+	@Override
+	public int compareTo(Object o)
+	{
+		if (o instanceof Item)
+		{
+			Item i = (Item) o;
+
+			return i.getFile().getAbsolutePath().compareTo(this.getFile().getAbsolutePath());
+		}
+
+		return 1;
+	}
 }

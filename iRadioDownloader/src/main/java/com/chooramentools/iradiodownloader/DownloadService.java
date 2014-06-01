@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -97,6 +98,8 @@ public class DownloadService extends Service
 					}
 				}
 
+				Collections.sort(filtered);
+
 				for (Item i : filtered)
 				{
 					URL url = mDownloader.getItemUrl(i);
@@ -122,7 +125,7 @@ public class DownloadService extends Service
 							.setProgress(filtered.size(), pos, false)
 							.setSmallIcon(R.drawable.ic_launcher)
 							.setContentTitle(i.getArtist() == null ? i.getEdition() : i.getArtist())
-							.setContentText(i.getTitle())
+							.setContentText((i.getTrack() != 0 ? i.getTrack() + ". " : "") + i.getTitle())
 							.build();
 
 					startForeground(R.id.download_notification, mNotification);
@@ -189,17 +192,17 @@ public class DownloadService extends Service
 								.setWhen(System.currentTimeMillis())
 				);
 
-				for (int i = 0; i < downloaded.size() && i < 5; i++)
+				for (int i = 0; i < downloaded.size() && i < 10; i++)
 				{
 					bla.addLine((downloaded.get(i).getArtist() == null ? "" : downloaded.get(i).getArtist() + "-") + downloaded.get(i).getTitle());
 				}
 
-				if (downloaded.size() > 5)
+				if (downloaded.size() > 10)
 				{
-					bla.setSummaryText("+" + (downloaded.size() - 5) + " dalších");
+					bla.setSummaryText("+" + (downloaded.size() - 10) + " dalších");
 				}
 
-				bla.setBigContentTitle(downloaded.size() != filtered.size() ? (filtered.size() - downloaded.size() + " selhaly") : "Vše OK");
+				bla.setBigContentTitle(filtered.size() + " nových souborů");
 
 				mNotification = bla.build();
 
