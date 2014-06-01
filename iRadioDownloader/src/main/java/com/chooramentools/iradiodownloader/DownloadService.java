@@ -10,6 +10,7 @@ import android.util.Log;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -148,6 +149,13 @@ public class DownloadService extends Service
 							{
 								mDownloader.get(artwork, i.getArtwork());
 							}
+
+							File info = i.getInfoFile();
+
+							if (!info.exists() && i.getComment() != null)
+							{
+								writeInfoFile(i);
+							}
 						}
 						catch (IOException e)
 						{
@@ -218,6 +226,36 @@ public class DownloadService extends Service
 
 			return mNotifyManager;
 		}
+	}
+
+	private void writeInfoFile(Item i)
+	{
+		PrintWriter pw = null;
+		try
+		{
+			pw = new PrintWriter(i.getInfoFile());
+
+			pw.println(i.getArtist());
+			pw.println(i.getTitle());
+			pw.println();
+			pw.println(i.getTrack() < 2 ? "1 soubor" : (i.getTrack() > 1 && i.getTrack() < 5 ? i.getTrack() + " soubory" : i.getTrack() + " souborů"));
+			pw.println(i.getStation());
+			pw.println(i.getEdition());
+			pw.println();
+			pw.print(i.getComment());
+		}
+		catch (Exception e)
+		{
+			Log.d(TAG, Log.getStackTraceString(e));
+		}
+		finally
+		{
+			if (pw != null)
+			{
+				pw.close();
+			}
+		}
+
 	}
 
 }

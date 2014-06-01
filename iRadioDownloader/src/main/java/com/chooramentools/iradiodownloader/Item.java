@@ -83,6 +83,11 @@ public class Item
 		return getFile("albumart.jpg");
 	}
 
+	public File getInfoFile()
+	{
+		return getFile("info.txt");
+	}
+
 	private String getFilename(int track)
 	{
 		String filename = String.format("%02d", track) + '.' + mTitle/* + ' ' + new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(mDate)*/;
