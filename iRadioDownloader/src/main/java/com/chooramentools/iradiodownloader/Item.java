@@ -326,6 +326,11 @@ public class Item implements Comparable
 		return mTrack;
 	}
 
+	public int getTotal()
+	{
+		return mTotal;
+	}
+
 	public void setTrack(int mTrack)
 	{
 		this.mTrack = mTrack;

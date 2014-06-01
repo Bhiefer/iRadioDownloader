@@ -241,7 +241,7 @@ public class DownloadService extends Service
 			pw.println(i.getArtist());
 			pw.println(i.getTitle());
 			pw.println();
-			pw.println(i.getTrack() < 2 ? "1 soubor" : (i.getTrack() > 1 && i.getTrack() < 5 ? i.getTrack() + " soubory" : i.getTrack() + " souborů"));
+			pw.println(i.getTotal() < 2 ? "1 soubor" : (i.getTotal() > 1 && i.getTotal() < 5 ? i.getTotal() + " soubory" : i.getTotal() + " souborů"));
 			pw.println(i.getStation());
 			pw.println(i.getEdition());
 			pw.println();
