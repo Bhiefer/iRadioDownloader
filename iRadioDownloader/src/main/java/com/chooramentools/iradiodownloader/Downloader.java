@@ -701,4 +701,23 @@ public class Downloader
 			}
 		}
 	}
+
+	public long getLength(URL url)
+	{
+		try
+		{
+			if (url == null)
+			{
+				return 0;
+			}
+
+			HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+			urlConnection.connect();
+			return urlConnection.getContentLength();
+		}
+		catch (Exception e)
+		{
+			return 0;
+		}
+	}
 }

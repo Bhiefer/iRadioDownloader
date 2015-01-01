@@ -45,10 +45,10 @@ public class DownloadService extends Service
 		mNotification = new Notification.Builder(getApplicationContext())
 				.setOngoing(true)
 				.setTicker("Stahuju audioknizky...")
-				.setWhen(System.currentTimeMillis())
-				.setProgress(0, 0, true)
+				.setSmallIcon(R.drawable.ic_notif)
 				.setContentTitle("Začínám stahovat")
 				.setContentText("... příprava ...")
+				.setWhen(System.currentTimeMillis())
 				.build();
 
 		startForeground(R.id.download_notification, mNotification);
@@ -123,7 +123,7 @@ public class DownloadService extends Service
 							.setTicker("Stahuju audioknizky...")
 							.setWhen(System.currentTimeMillis())
 							.setProgress(filtered.size(), pos, false)
-							.setSmallIcon(R.drawable.ic_launcher)
+							.setSmallIcon(R.drawable.ic_notif)
 							.setContentTitle(i.getArtist() == null ? i.getEdition() : i.getArtist())
 							.setContentText((i.getTrack() != 0 ? i.getTrack() + ". " : "") + i.getTitle())
 							.build();
@@ -132,18 +132,45 @@ public class DownloadService extends Service
 
 					Log.d(TAG, i.toString());
 
-					if (i.getFile().exists())
+					boolean valid = false;
+
+					try
 					{
-						Log.d(TAG, "File exists");
+						if (i.getFile().exists())
+						{
+							if (i.getFile().length() == mDownloader.getLength(i.getUrl()))
+							{
+								Log.d(TAG, "File exists");
+								valid = true;
+							}
+							else
+							{
+								Log.w(TAG, "File exists with incorrect length");
+								i.getFile().delete();
+							}
+						}
 					}
-					else
+					catch (Exception e)
+					{
+						Log.e(TAG, Log.getStackTraceString(e));
+					}
+
+					// soubor neni spravne ulozen, stahnout
+					if (!valid)
 					{
 						try
 						{
 							mDownloader.get(i.getFile(), i.getUrl());
 							if (i.getFile().exists())
 							{
-								downloaded.add(i);
+								if (i.getFile().length() == mDownloader.getLength(i.getUrl()))
+								{
+									downloaded.add(i);
+								}
+								else
+								{
+									i.getFile().delete();
+								}
 							}
 
 							File artwork = i.getArtworkFile();
@@ -188,7 +215,7 @@ public class DownloadService extends Service
 						new Notification.Builder(getApplicationContext())
 								.setContentTitle(filtered.size() + " nových souborů")
 								.setContentText(downloaded.size() != filtered.size() ? (filtered.size() - downloaded.size() + " selhaly") : "Vše OK")
-								.setSmallIcon(R.drawable.ic_launcher)
+								.setSmallIcon(R.drawable.ic_notif)
 								.setWhen(System.currentTimeMillis())
 				);
 
