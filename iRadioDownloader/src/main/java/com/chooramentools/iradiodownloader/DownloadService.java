@@ -265,14 +265,22 @@ public class DownloadService extends Service
 		{
 			pw = new PrintWriter(i.getInfoFile());
 
-			pw.println(i.getArtist());
-			pw.println(i.getTitle());
-			pw.println();
+			pw.println((i.getArtist() != null) ? i.getArtist() : "Neznámý autor");
+			pw.println((i.getTitle() != null) ? i.getTitle() : "Neznámý název");
+
 			pw.println(i.getTotal() < 2 ? "1 soubor" : (i.getTotal() > 1 && i.getTotal() < 5 ? i.getTotal() + " soubory" : i.getTotal() + " souborů"));
-			pw.println(i.getStation());
-			pw.println(i.getEdition());
+			if (i.getStation() != null)
+			{
+				pw.println(i.getStation());
+			}
+			if (i.getEdition() != null)
+			{
+				pw.println(i.getEdition());
+			}
+
 			pw.println();
-			pw.print(i.getComment());
+
+			pw.println((i.getComment() != null) ? i.getComment() : "Žádný komentář.");
 		}
 		catch (Exception e)
 		{
