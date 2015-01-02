@@ -5,7 +5,11 @@ import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
+import android.os.Environment;
 import android.os.IBinder;
+import android.os.StatFs;
+import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
 import java.io.File;
@@ -42,7 +46,7 @@ public class DownloadService extends Service
 
 		mDownloader = new Downloader();
 
-		mNotification = new Notification.Builder(getApplicationContext())
+		mNotification = new NotificationCompat.Builder(getApplicationContext())
 				.setOngoing(true)
 				.setTicker("Stahuju audioknizky...")
 				.setSmallIcon(R.drawable.ic_notif)
@@ -76,9 +80,11 @@ public class DownloadService extends Service
 		@Override
 		public void run()
 		{
+			checkSpace();
 
 			List<Item> filtered = new ArrayList<Item>();
 			List<Item> downloaded = new ArrayList<Item>();
+
 			try
 			{
 				List<Item> items = mDownloader.getItems();
@@ -118,7 +124,8 @@ public class DownloadService extends Service
 
 				for (Item i : filtered)
 				{
-					mNotification = new Notification.Builder(getApplicationContext())
+
+					mNotification = new NotificationCompat.Builder(getApplicationContext())
 							.setOngoing(true)
 							.setTicker("Stahuju audioknizky...")
 							.setWhen(System.currentTimeMillis())
@@ -210,9 +217,9 @@ public class DownloadService extends Service
 
 				stopForeground(true);
 
-				Notification.InboxStyle bla = new Notification.InboxStyle(
+				NotificationCompat.InboxStyle bla = new NotificationCompat.InboxStyle(
 
-						new Notification.Builder(getApplicationContext())
+						new NotificationCompat.Builder(getApplicationContext())
 								.setContentTitle(filtered.size() + " nových souborů")
 								.setContentText(downloaded.size() != filtered.size() ? (filtered.size() - downloaded.size() + " selhaly") : "Vše OK")
 								.setSmallIcon(R.drawable.ic_notif)
@@ -258,6 +265,60 @@ public class DownloadService extends Service
 		}
 	}
 
+	private void checkSpace()
+	{
+		File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC);
+
+		if (dir == null)
+		{
+			return;
+		}
+
+		dir = new File(dir.getAbsolutePath() + File.separator + "Audiobooks");
+
+		long availableSpace = -1L;
+		try
+		{
+			StatFs stat = new StatFs(dir.getAbsolutePath());
+			availableSpace = getAvailableBlocks(stat) * getBlockSize(stat);
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+			return;
+		}
+
+		availableSpace /= 1024 * 1024;
+
+		Log.d(TAG, "Volne misto: " + availableSpace);
+
+		if (availableSpace < 200)
+		{
+			// mene nez 200 MB volneho mista
+			try
+			{
+				delete(dir);
+			}
+			catch (IOException e)
+			{
+				return;
+			}
+		}
+	}
+
+	void delete(File f) throws IOException
+	{
+		if (f.isDirectory())
+		{
+			for (File c : f.listFiles())
+			{
+				delete(c);
+			}
+		}
+
+		f.delete();
+	}
+
 	private void writeInfoFile(Item i)
 	{
 		PrintWriter pw = null;
@@ -266,7 +327,7 @@ public class DownloadService extends Service
 			pw = new PrintWriter(i.getInfoFile());
 
 			pw.println((i.getArtist() != null) ? i.getArtist() : "Neznámý autor");
-			pw.println((i.getTitle() != null) ? i.getTitle() : "Neznámý název");
+			pw.println((i.getTitle() != null) ? i.getTitle() : "Bez názvu");
 
 			pw.println(i.getTotal() < 2 ? "1 soubor" : (i.getTotal() > 1 && i.getTotal() < 5 ? i.getTotal() + " soubory" : i.getTotal() + " souborů"));
 			if (i.getStation() != null)
@@ -294,6 +355,32 @@ public class DownloadService extends Service
 			}
 		}
 
+	}
+
+	@SuppressWarnings("deprecation")
+	private static long getAvailableBlocks(StatFs stat)
+	{
+		if (Build.VERSION.SDK_INT >= 18)
+		{
+			return stat.getAvailableBlocksLong();
+		}
+		else
+		{
+			return stat.getAvailableBlocks();
+		}
+	}
+
+	@SuppressWarnings("deprecation")
+	private static long getBlockSize(StatFs stat)
+	{
+		if (Build.VERSION.SDK_INT >= 18)
+		{
+			return stat.getBlockSizeLong();
+		}
+		else
+		{
+			return stat.getBlockSize();
+		}
 	}
 
 }
