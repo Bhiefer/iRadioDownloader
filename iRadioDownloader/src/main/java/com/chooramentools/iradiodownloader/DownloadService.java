@@ -16,8 +16,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -82,25 +84,47 @@ public class DownloadService extends Service
 		{
 			checkSpace();
 
+			List<Item> log_exists = new ArrayList<Item>();
+			List<Item> log_corrupted = new ArrayList<Item>();
+			List<Item> log_downloaded_bad = new ArrayList<Item>();
+
 			List<Item> filtered = new ArrayList<Item>();
 			List<Item> downloaded = new ArrayList<Item>();
+			List<Item> items = null;
 
 			try
 			{
-				List<Item> items = mDownloader.getItems();
+				items = mDownloader.getItems();
 
 //				Log.d(TAG, items.toString());
 
 				for (Item i : items)
 				{
-					if (i.getFile().exists())
+					try
 					{
-						Log.d(TAG, i.toString() + ": File exists");
+						if (i.getFile().exists())
+						{
+							if (i.getFile().length() == mDownloader.getLength(i.getUrl()))
+							{
+								Log.d(TAG, i.toString() + ": File exists");
+								log_exists.add(i);
+							}
+							else
+							{
+								Log.w(TAG, i.toString() + ": File exists with incorrect length");
+								i.getFile().delete();
+								filtered.add(i);
+								log_corrupted.add(i);
+							}
+						}
+						else
+						{
+							filtered.add(i);
+						}
 					}
-					else
+					catch (Exception e)
 					{
-						filtered.add(i);
-//						break;
+						Log.e(TAG, Log.getStackTraceString(e));
 					}
 				}
 
@@ -127,7 +151,7 @@ public class DownloadService extends Service
 
 					mNotification = new NotificationCompat.Builder(getApplicationContext())
 							.setOngoing(true)
-							.setTicker("Stahuju audioknizky...")
+							.setTicker("Stahuju audioknihy...")
 							.setWhen(System.currentTimeMillis())
 							.setProgress(filtered.size(), pos, false)
 							.setSmallIcon(R.drawable.ic_notif)
@@ -139,73 +163,47 @@ public class DownloadService extends Service
 
 					Log.d(TAG, i.toString());
 
-					boolean valid = false;
-
 					try
 					{
+						mDownloader.get(i.getFile(), i.getUrl());
 						if (i.getFile().exists())
 						{
 							if (i.getFile().length() == mDownloader.getLength(i.getUrl()))
 							{
-								Log.d(TAG, "File exists");
-								valid = true;
+								downloaded.add(i);
 							}
 							else
 							{
-								Log.w(TAG, "File exists with incorrect length");
+								log_downloaded_bad.add(i);
 								i.getFile().delete();
 							}
 						}
+
+						File artwork = i.getArtworkFile();
+
+						if (!artwork.exists() && i.getArtwork() != null)
+						{
+							mDownloader.get(artwork, i.getArtwork());
+						}
+
+						File info = i.getInfoFile();
+
+						if (!info.exists() && i.getComment() != null)
+						{
+							writeInfoFile(i);
+						}
 					}
-					catch (Exception e)
+					catch (IOException e)
 					{
-						Log.e(TAG, Log.getStackTraceString(e));
+						e.printStackTrace();
 					}
-
-					// soubor neni spravne ulozen, stahnout
-					if (!valid)
+					catch (TimeoutException e)
 					{
-						try
-						{
-							mDownloader.get(i.getFile(), i.getUrl());
-							if (i.getFile().exists())
-							{
-								if (i.getFile().length() == mDownloader.getLength(i.getUrl()))
-								{
-									downloaded.add(i);
-								}
-								else
-								{
-									i.getFile().delete();
-								}
-							}
-
-							File artwork = i.getArtworkFile();
-
-							if (!artwork.exists() && i.getArtwork() != null)
-							{
-								mDownloader.get(artwork, i.getArtwork());
-							}
-
-							File info = i.getInfoFile();
-
-							if (!info.exists() && i.getComment() != null)
-							{
-								writeInfoFile(i);
-							}
-						}
-						catch (IOException e)
-						{
-							e.printStackTrace();
-						}
-						catch (TimeoutException e)
-						{
-							e.printStackTrace();
-						}
+						e.printStackTrace();
 					}
-
-					pos++;
 				}
+
+				pos++;
 			}
 			finally
 			{
@@ -214,6 +212,8 @@ public class DownloadService extends Service
 				{
 					i.storeToTag();
 				}
+
+				logProcess(items, log_exists, log_corrupted, filtered, downloaded, log_downloaded_bad);
 
 				stopForeground(true);
 
@@ -262,6 +262,93 @@ public class DownloadService extends Service
 			}
 
 			return mNotifyManager;
+		}
+	}
+
+	private void logProcess(List<Item> all, List<Item> exists, List<Item> corrupted, List<Item> toDownload, List<Item> downloaded, List<Item> downloadedBad)
+	{
+		File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC);
+
+		if (dir == null)
+		{
+			return;
+		}
+
+		dir = new File(dir.getAbsolutePath() + File.separator + "Audiobooks" + File.separator + "Logs");
+
+		if (!dir.exists())
+		{
+			dir.mkdirs();
+		}
+
+		File log = new File(dir, new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date()) + ".txt");
+
+		PrintWriter pw = null;
+
+		try
+		{
+			pw = new PrintWriter(log);
+
+			if (all != null)
+			{
+				pw.println("POLOZKY NA SERVERU:");
+
+				for (Item i : all)
+				{
+					pw.println(i.toString());
+				}
+				pw.println();
+
+				pw.println("JIZ STAZENE POLOZKY:");
+				for (Item i : exists)
+				{
+					pw.println(i.toString());
+				}
+				pw.println();
+
+				pw.println("POSKOZENE POLOZKY PRO OPETOVNE STAZENI:");
+				for (Item i : corrupted)
+				{
+					pw.println(i.toString());
+				}
+				pw.println();
+
+				pw.println("POLOZKY PRO STAZENI:");
+				for (Item i : toDownload)
+				{
+					pw.println(i.toString());
+				}
+				pw.println();
+
+				pw.println("STAZENE POLOZKY:");
+				for (Item i : downloaded)
+				{
+					pw.println(i.toString());
+				}
+				pw.println();
+
+				pw.println("SPATNE STAZENE POLOZKY:");
+				for (Item i : downloadedBad)
+				{
+					pw.println(i.toString());
+				}
+				pw.println();
+			}
+			else
+			{
+				pw.println("NEZDARILO SE STAHNOUT ZADNE POLOZKY!!");
+			}
+		}
+		catch (Exception e)
+		{
+			Log.d(TAG, Log.getStackTraceString(e));
+		}
+		finally
+		{
+			if (pw != null)
+			{
+				pw.close();
+			}
 		}
 	}
 
