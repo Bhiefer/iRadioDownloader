@@ -65,7 +65,7 @@ public class Item implements Comparable
 
 		if (mTrack != 0)
 		{
-			return new File(dir.getAbsolutePath() + File.separator + mEdition + " (" + mStation + ')' + File.separator + (mArtist == null ? "" : mArtist + "-") + mTitle + " " + mTotal + " dílů" + File.separator + filename);
+			return new File(dir.getAbsolutePath() + File.separator + mEdition + " (" + mStation + ')' + File.separator + (mArtist == null ? "" : mArtist + "-") + mTitle + " " + mTotal + (mTotal > 4 ? " dílů" : " díly") + File.separator + filename);
 		}
 		else
 		{
