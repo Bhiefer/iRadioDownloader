@@ -33,9 +33,9 @@ public class Downloader
 
 	public List<Item> getItems()
 	{
-		List<Item> items = new ArrayList<Item>();
+		List<Item> items = new ArrayList<>();
 
-		boolean empty = true;
+		boolean empty;
 		int offset = 0;
 		int lastSize = 0;
 
@@ -43,9 +43,11 @@ public class Downloader
 		{
 
 			empty = true;
+
+			File listFile = null;
 			try
 			{
-				File listFile = File.createTempFile("list", offset + "");
+				listFile = File.createTempFile("list", offset + "");
 				URL url = new URL("http://hledani.rozhlas.cz/iRadio/?missingRedirect=&offset=" + offset + "&projekt=Rozhlasov%C3%A9+hry+a+pov%C3%ADdky");
 
 				get(listFile, url);
@@ -230,7 +232,7 @@ public class Downloader
 						}
 						catch (Exception ex)
 						{
-							Log.e(TAG, "Error during parsing: " + name + ": " + ex.toString());
+							Log.w(TAG, "Error during parsing: " + name + ": " + ex.toString());
 						}
 					}
 
@@ -242,7 +244,7 @@ public class Downloader
 				}
 				catch (Exception ex)
 				{
-					Log.e(TAG, "Error during parsing: " + name + ": " + ex.toString());
+					Log.w(TAG, "Error during parsing: " + name + ": " + ex.toString());
 				}
 				finally
 				{
@@ -260,6 +262,13 @@ public class Downloader
 			{
 				e.printStackTrace();
 			}
+			finally
+			{
+				if(listFile != null)
+				{
+					listFile.delete();
+				}
+			}
 
 			for (int i = lastSize; i < items.size(); i++)
 			{
@@ -276,6 +285,7 @@ public class Downloader
 
 	public URL getItemUrl(Item item)
 	{
+		File listFile = null;
 		try
 		{
 			String station;
@@ -293,7 +303,7 @@ public class Downloader
 				return null;
 			}
 
-			File listFile = File.createTempFile(station, item.getId() + "");
+			listFile = File.createTempFile(station, item.getId() + "");
 			URL url = new URL("http://www.rozhlas.cz/" + station + "/stream");
 
 			get(listFile, url);
@@ -402,12 +412,16 @@ public class Downloader
 			}
 		}
 
-		catch (
-				Exception e
-				)
-
+		catch (	Exception e	)
 		{
 			e.printStackTrace();
+		}
+		finally
+		{
+			if(listFile != null)
+			{
+				listFile.delete();
+			}
 		}
 
 		return null;
@@ -415,10 +429,11 @@ public class Downloader
 
 	public void getItemDetails(URL url, Item item)
 	{
+		File listFile = null;
 		try
 		{
 
-			File listFile = File.createTempFile("details", item.getId() + "");
+			listFile = File.createTempFile("details", item.getId() + "");
 
 			get(listFile, url);
 
@@ -477,7 +492,7 @@ public class Downloader
 										}
 										catch (Exception e)
 										{
-											Log.e(TAG, "Error during parsing: " + name + ": " + e.toString());
+											Log.w(TAG, "Error during parsing: " + name + ": " + e.toString());
 										}
 									}
 
@@ -501,7 +516,7 @@ public class Downloader
 							}
 							catch (Exception ex)
 							{
-								Log.e(TAG, Log.getStackTraceString(ex));
+								Log.e(TAG, "Unresolved parsing error: " + ex.getMessage());
 							}
 							break;
 						case XmlPullParser.END_TAG:
@@ -517,18 +532,15 @@ public class Downloader
 					}
 					catch (Exception ex)
 					{
-						Log.e(TAG, "Error during parsing: " + name + ": " + ex.toString());
+						Log.w(TAG, "Error during parsing: " + name + ": " + ex.toString());
 					}
 				}
 			}
-
 			catch (Exception ex)
 			{
-				Log.e(TAG, "Error during parsing: " + name + ": " + ex.toString());
+				Log.w(TAG, "Error during parsing: " + name + ": " + ex.toString());
 			}
-
 			finally
-
 			{
 				try
 				{
@@ -540,10 +552,16 @@ public class Downloader
 				}
 			}
 		}
-
 		catch (Exception e)
 		{
 			e.printStackTrace();
+		}
+		finally
+		{
+			if(listFile != null)
+			{
+				listFile.delete();
+			}
 		}
 
 	}
@@ -656,28 +674,10 @@ public class Downloader
 			inStream = new BufferedInputStream(conn.getInputStream());
 			outStream = new BufferedOutputStream(fileStream, 4096);
 			byte[] data = new byte[4096];
-			int bytesRead = 0;
-			int totalBytesRead = 0;
-			int i = 0;
+			int bytesRead;
 			while ((bytesRead = inStream.read(data, 0, data.length)) >= 0)
 			{
 				outStream.write(data, 0, bytesRead);
-
-				totalBytesRead += bytesRead;
-
-				if (i++ % 200 == 0)
-				{
-//                    if (mProgressListener != null)
-//                    {
-////							log.d("update progress");
-//                        mProgressListener.onProgress(totalBytesRead, fileSize);
-//                    }
-//
-//                    if (mCancelledCallback != null)
-//                    {
-//                        mCancelledCallback.checkCancellation();
-//                    }
-				}
 			}
 
 			outStream.close();

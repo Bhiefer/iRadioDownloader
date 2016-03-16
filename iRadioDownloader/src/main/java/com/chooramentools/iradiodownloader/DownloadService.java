@@ -75,6 +75,7 @@ public class DownloadService extends Service
 		super.onDestroy();
 	}
 
+	@SuppressWarnings("ResultOfMethodCallIgnored")
 	private class DownloadThread extends Thread
 	{
 		private NotificationManager mNotifyManager;
@@ -84,12 +85,12 @@ public class DownloadService extends Service
 		{
 			checkSpace();
 
-			List<Item> log_exists = new ArrayList<Item>();
-			List<Item> log_corrupted = new ArrayList<Item>();
-			List<Item> log_downloaded_bad = new ArrayList<Item>();
+			List<Item> log_exists = new ArrayList<>();
+			List<Item> log_corrupted = new ArrayList<>();
+			List<Item> log_downloaded_bad = new ArrayList<>();
 
-			List<Item> filtered = new ArrayList<Item>();
-			List<Item> downloaded = new ArrayList<Item>();
+			List<Item> filtered = new ArrayList<>();
+			List<Item> downloaded = new ArrayList<>();
 			List<Item> items = null;
 
 			try
@@ -104,14 +105,16 @@ public class DownloadService extends Service
 					{
 						if (i.getFile().exists())
 						{
-							if (i.getFile().length() == mDownloader.getLength(i.getUrl()))
+							long remoteLength = mDownloader.getLength(i.getUrl());
+							// it cannot be equals becuase we add tags
+							if (i.getFile().length() >= remoteLength)
 							{
 								Log.d(TAG, i.toString() + ": File exists");
 								log_exists.add(i);
 							}
 							else
 							{
-								Log.w(TAG, i.toString() + ": File exists with incorrect length");
+								Log.w(TAG, i.toString() + ": File exists with incorrect length: local " + i.getFile().length() + ", remote: " + remoteLength );
 								i.getFile().delete();
 								filtered.add(i);
 								log_corrupted.add(i);
@@ -153,7 +156,7 @@ public class DownloadService extends Service
 							.setOngoing(true)
 							.setTicker("Stahuju audioknihy...")
 							.setWhen(System.currentTimeMillis())
-							.setProgress(filtered.size(), pos, false)
+							.setProgress(filtered.size(), pos++, false)
 							.setSmallIcon(R.drawable.ic_notif)
 							.setContentTitle(i.getArtist() == null ? i.getEdition() : i.getArtist())
 							.setContentText((i.getTrack() != 0 ? i.getTrack() + ". " : "") + i.getTitle())
@@ -193,17 +196,11 @@ public class DownloadService extends Service
 							writeInfoFile(i);
 						}
 					}
-					catch (IOException e)
-					{
-						e.printStackTrace();
-					}
-					catch (TimeoutException e)
+					catch (IOException | TimeoutException e)
 					{
 						e.printStackTrace();
 					}
 				}
-
-				pos++;
 			}
 			finally
 			{
@@ -281,7 +278,7 @@ public class DownloadService extends Service
 			dir.mkdirs();
 		}
 
-		File log = new File(dir, new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date()) + ".txt");
+		File log = new File(dir, new SimpleDateFormat("yyyy-MM-dd hh-mm-ss").format(new Date()) + ".txt");
 
 		PrintWriter pw = null;
 
@@ -363,7 +360,7 @@ public class DownloadService extends Service
 
 		dir = new File(dir.getAbsolutePath() + File.separator + "Audiobooks");
 
-		long availableSpace = -1L;
+		long availableSpace;
 		try
 		{
 			StatFs stat = new StatFs(dir.getAbsolutePath());

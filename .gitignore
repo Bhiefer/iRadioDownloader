@@ -5,3 +5,5 @@
 
 build/intermediates/dex-cache/cache.xml
 build/intermediates/model_data.bin
+build/generated/mockable-android-23.jar
+*.bin

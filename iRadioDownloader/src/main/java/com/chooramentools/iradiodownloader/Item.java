@@ -1,6 +1,7 @@
 package com.chooramentools.iradiodownloader;
 
 import android.os.Environment;
+import android.support.annotation.NonNull;
 
 import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.audio.mp3.MP3File;
@@ -339,7 +340,7 @@ public class Item implements Comparable
 	@Override
 	public String toString()
 	{
-		return getFile().getAbsolutePath() + " " + mId + ", artwork:" + (mArtwork == null ? "null" : mArtwork.toString()) + "\nComment:\n" + mComment;
+		return getFile().getAbsolutePath() + " " + mId + ", artwork:" + (mArtwork == null ? "null" : mArtwork.toString()) + "\nComment:\n" + getShortenedComment();
 	}
 
 	public void setTotal(int total)
@@ -378,7 +379,7 @@ public class Item implements Comparable
 	}
 
 	@Override
-	public int compareTo(Object o)
+	public int compareTo(@NonNull Object o)
 	{
 		if (o instanceof Item)
 		{
@@ -388,5 +389,20 @@ public class Item implements Comparable
 		}
 
 		return 1;
+	}
+
+	public String getShortenedComment() {
+		if(mComment == null)
+        {
+			return "";
+		}
+		else if(mComment.length() < 100)
+		{
+			return mComment;
+		}
+		else
+		{
+			return mComment.substring(0,100) + "...";
+		}
 	}
 }
